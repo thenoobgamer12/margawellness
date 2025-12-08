@@ -432,6 +432,8 @@ function App() {
           onLogout={handleLogout} 
           initialClients={clients}
           openEditClientModal={openEditClientModal}
+          clients={clients}
+          therapists={therapists}
         />
       )}
 

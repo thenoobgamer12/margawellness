@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User, Search, Filter, X } from 'lucide-react';
 import styles from './Dashboard.module.css';
 
