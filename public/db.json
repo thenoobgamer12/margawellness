@@ -1,0 +1,204 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "password": "YWRtaW4xMjM=",
+      "role": "Admin",
+      "id": "865e"
+    },
+    {
+      "id": "aed1",
+      "username": "soumili",
+      "password": "c291bWlsaTEyMw==",
+      "role": "Therapist",
+      "counselor": "soumili"
+    },
+    {
+      "id": "ce8a",
+      "username": "monoshita",
+      "password": "bW9ub3NoaXRhMTIz",
+      "role": "Therapist",
+      "counselor": "monoshita"
+    }
+  ],
+  "clients": [
+    {
+      "id": "2872",
+      "caseId": "C-1001",
+      "clientName": "Rahul Das",
+      "age": 28,
+      "gender": "Male",
+      "contactNo": "9830654321",
+      "addressCity": "Kolkata",
+      "caseType": "Mental Health Support",
+      "counselor": "soumili",
+      "dateOpened": "2025-11-15",
+      "status": "Open",
+      "caseHistoryDocument": "https://example.com/case_history_1",
+      "sessionSummaryDocument": "https://example.com/session_summary_1"
+    },
+    {
+      "id": "ba35",
+      "caseId": "C-1002",
+      "clientName": "Ananya Roy",
+      "age": 22,
+      "gender": "Female",
+      "contactNo": "9801234567",
+      "addressCity": "Howrah",
+      "caseType": "Career Guidance",
+      "counselor": "monoshita",
+      "dateOpened": "2025-10-03",
+      "status": "Open",
+      "caseHistoryDocument": "https://example.com/case_history_2",
+      "sessionSummaryDocument": "https://example.com/session_summary_2"
+    },
+    {
+      "id": "1b62",
+      "caseId": "C-1003",
+      "clientName": "Arjun Sen",
+      "age": 35,
+      "gender": "Male",
+      "contactNo": "9876543210",
+      "addressCity": "Bardhaman",
+      "caseType": "Personal Counseling",
+      "counselor": "soumili",
+      "dateOpened": "2025-09-20",
+      "status": "Open",
+      "caseHistoryDocument": "https://example.com/case_history_3",
+      "sessionSummaryDocument": "https://example.com/session_summary_3"
+    },
+    {
+      "id": "f550",
+      "caseId": "C-1004",
+      "clientName": "Sangeeta Mitra",
+      "age": 30,
+      "gender": "Female",
+      "contactNo": "9900112233",
+      "addressCity": "Kolkata",
+      "caseType": "Mental Health Support",
+      "counselor": "monoshita",
+      "dateOpened": "2025-11-01",
+      "status": "Open",
+      "caseHistoryDocument": "https://example.com/case_history_4",
+      "sessionSummaryDocument": "https://example.com/session_summary_4"
+    },
+    {
+      "id": "5e50",
+      "caseId": "C-1005",
+      "clientName": "Vikram Chatterjee",
+      "age": 27,
+      "gender": "Male",
+      "contactNo": "9821445678",
+      "addressCity": "Hooghly",
+      "caseType": "Career Guidance",
+      "counselor": "monoshita",
+      "dateOpened": "2025-08-15",
+      "status": "Closed",
+      "caseHistoryDocument": "https://example.com/case_history_5",
+      "sessionSummaryDocument": "https://example.com/session_summary_5"
+    },
+    {
+      "id": "a3b1",
+      "caseId": "C-1007",
+      "clientName": "Deepak Roy",
+      "age": 29,
+      "gender": "Male",
+      "contactNo": "9833221144",
+      "addressCity": "Kolkata",
+      "caseType": "Personal Counseling",
+      "counselor": "monoshita",
+      "dateOpened": "2025-09-30",
+      "status": "Closed",
+      "caseHistoryDocument": "https://example.com/case_history_7",
+      "sessionSummaryDocument": "https://example.com/session_summary_7"
+    },
+    {
+      "id": "31ea",
+      "caseId": "C-1006",
+      "clientName": "Priya Ghosh",
+      "age": 24,
+      "gender": "Female",
+      "contactNo": "9810998877",
+      "addressCity": "Nadia",
+      "caseType": "Academic Counseling",
+      "counselor": "soumili",
+      "dateOpened": "2025-10-25",
+      "status": "Open",
+      "caseHistoryDocument": "https://example.com/case_history_6",
+      "sessionSummaryDocument": "https://example.com/session_summary_6"
+    },
+    {
+      "id": "602f",
+      "caseId": "C-1008",
+      "clientName": "Debjani Sarkar",
+      "age": 32,
+      "gender": "Female",
+      "contactNo": "9809334556",
+      "addressCity": "Murshidabad",
+      "caseType": "Mental Health Support",
+      "counselor": "monoshita",
+      "dateOpened": "2025-11-05",
+      "status": "Open",
+      "caseHistoryDocument": "https://example.com/case_history_8",
+      "sessionSummaryDocument": "https://example.com/session_summary_8"
+    },
+    {
+      "id": "605e",
+      "caseId": "C-1009",
+      "clientName": "Mohit Banerjee",
+      "age": 26,
+      "gender": "Male",
+      "contactNo": "9899122334",
+      "addressCity": "Kolkata",
+      "caseType": "Academic Counseling",
+      "counselor": "monoshita",
+      "dateOpened": "2025-10-10",
+      "status": "Closed",
+      "caseHistoryDocument": "https://example.com/case_history_9",
+      "sessionSummaryDocument": "https://example.com/session_summary_9"
+    },
+    {
+      "id": "8ac1",
+      "caseId": "C-1010",
+      "clientName": "Ria Chakraborty",
+      "age": 23,
+      "gender": "Female",
+      "contactNo": "9844556677",
+      "addressCity": "Howrah",
+      "caseType": "Career Guidance",
+      "counselor": "soumili",
+      "dateOpened": "2025-11-12",
+      "status": "Open",
+      "caseHistoryDocument": "https://example.com/case_history_10",
+      "sessionSummaryDocument": "https://example.com/session_summary_10"
+    }
+  ],
+  "schedule": {
+    "2025-12-06": {
+      "soumili": {
+        "09:00 AM": {
+          "client": "Priya Ghosh",
+          "therapist": "soumili"
+        },
+        "09:45 AM": {
+          "client": "Priya Ghosh",
+          "therapist": "soumili"
+        }
+      },
+      "monoshita": {
+        "11:15 AM": {
+          "client": "Vikram Chatterjee",
+          "therapist": "monoshita"
+        }
+      }
+    },
+    "2025-12-08": {
+      "soumili": {
+        "11:15 AM": {
+          "client": "Sangeeta Mitra",
+          "therapist": "soumili"
+        }
+      }
+    }
+  }
+}

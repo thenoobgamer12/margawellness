@@ -1,0 +1,118 @@
+.loginPage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: #f3f4f6;
+    font-family: sans-serif;
+}
+
+.container {
+    width: 100%;
+    max-width: 28rem;
+    padding: 2rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.logoContainer {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.logo {
+    width: 10rem;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+    color: #111827;
+    margin-bottom: 1.5rem;
+}
+
+.form {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; /* Adjust gap for the new structure */
+}
+
+.input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem; /* Ensure consistent line height */
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+.input::placeholder {
+    color: #9ca3af; /* Style placeholder text */
+}
+
+.input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 1px #4f46e5, 0 0 0 2px #c7d2fe; /* Refined focus ring */
+}
+
+.rememberGroup {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.875rem;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkbox {
+    width: 1rem;
+    height: 1rem;
+}
+
+.submitButton {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    color: white;
+    background-color: #4f46e5;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.submitButton:hover {
+    background-color: #4338ca;
+}
+
+.error {
+    color: #ef4444;
+    font-size: 0.875rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.credentials {
+    font-size: 0.875rem;
+    color: #4b5563;
+    text-align: center;
+    margin-top: 1rem;
+}
+
+.credentials p {
+    margin: 0.25rem 0;
+}
+
+.credentials strong {
+    font-weight: 600;
+}
