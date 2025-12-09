@@ -1,19 +1,17 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { User, Search, Filter, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Calendar, User, Search, Filter, X } from 'lucide-react';
 import styles from './Dashboard.module.css';
 
-const TherapistDashboard = ({ user, onLogout, initialClients, openEditClientModal }) => {
-  // initialClients is directly used by filteredClients useMemo, no need for local state
+const TherapistDashboard = ({ user, onLogout, clients, openEditClientModal, openScheduleModal }) => { // Changed initialClients to clients
+  // const [clients] = useState(initialClients); // Removed local state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
-  const filteredClients = useMemo(() => initialClients.filter(client => 
-      // Filter clients by counselorId for the logged-in therapist
-      client && client.clientName &&
-      (client.counselorId === user.id) && // Changed from client.counselor === user.counselor to client.counselorId === user.id
-      (client.clientName.toLowerCase().includes(searchTerm.toLowerCase())) && // Removed Case ID from search
+  const filteredClients = useMemo(() => clients.filter(client => 
+      (String(client.therapist_id) === String(user.id)) && // Filter by therapist_id
+      (client.name.toLowerCase().includes(searchTerm.toLowerCase()) || String(client.id).includes(searchTerm)) && // Changed clientName to name, caseId to id
       (statusFilter === 'All' || client.status === statusFilter)
-  ), [initialClients, searchTerm, statusFilter, user]);
+  ), [clients, searchTerm, statusFilter, user]);
 
   return (
     <div className={styles.dashboard}>
@@ -31,7 +29,7 @@ const TherapistDashboard = ({ user, onLogout, initialClients, openEditClientModa
         <div className={styles.controls}>
           <div className={styles.searchGroup}>
              <Search size={20} className={styles.searchIcon} />
-             <input type="text" placeholder="Search by name..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} /> {/* Case ID removed from placeholder */}
+             <input type="text" placeholder="Search by name or ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
           </div>
           <div className={styles.filterControls}>
               <div className={styles.filterGroup}>
@@ -42,6 +40,9 @@ const TherapistDashboard = ({ user, onLogout, initialClients, openEditClientModa
                     <option value="Closed">Closed</option>
                 </select>
               </div>
+              <button onClick={openScheduleModal} className={`${styles.actionButton} ${styles.scheduleButton}`}>
+                <Calendar size={20} /> <span>View Schedule</span>
+              </button>
             </div>
         </div>
 
@@ -49,17 +50,20 @@ const TherapistDashboard = ({ user, onLogout, initialClients, openEditClientModa
             {filteredClients.length > 0 ? (
                 <div className={styles.clientList}>
                     <div className={styles.clientListHeader}>
-                        {/* Case ID removed */}
-                        <p>Client Name</p><p>Age</p><p>Gender</p><p>Status</p><p>Actions</p>
+                        <p>ID</p><p>Client Name</p><p>DOB</p><p>Gender</p><p>Status</p><p>Actions</p>
                     </div>
                     {filteredClients.map((client) => (
-                        <div key={client.id} className={styles.clientListItem}> {/* Changed key to client.id */}
-                            <p className={styles.clientNameColumn}>{client.clientName}</p><p>{client.age}</p><p>{client.gender}</p>
-                            <p><span className={`${styles.statusBadge} ${client.status === 'Open' ? styles.statusOpen : styles.statusClosed}`}>{client.status}</span></p>
+                        <div key={client.id} className={styles.clientListItem}>
+                            <p data-label="ID">{client.id}</p>
+                            <p data-label="Client Name" className={styles.clientNameColumn}>{client.name}</p>
+                            <p data-label="DOB">{client.dob}</p>
+                            <p data-label="Gender">{client.gender}</p>
+                            <p data-label="Status"><span className={`${styles.statusBadge} ${client.status === 'Open' ? styles.statusOpen : styles.statusClosed}`}>{client.status}</span></p>
                             <div className={styles.clientActions}>
                                 <button onClick={() => openEditClientModal(client)} className={styles.actionLink}>Edit Docs</button>
-                                <a href={client.caseHistoryDocument} target="_blank" rel="noopener noreferrer" className={styles.actionLink}>History</a>
-                                <a href={client.sessionSummaryDocument} target="_blank" rel="noopener noreferrer" className={styles.actionLink}>Summary</a>
+                                {/* Assuming documents are stored as URLs or handled differently now */}
+                                {/* <a href={client.caseHistoryDocument} target="_blank" rel="noopener noreferrer" className={styles.actionLink}>History</a>
+                                <a href={client.sessionSummaryDocument} target="_blank" rel="noopener noreferrer" className={styles.actionLink}>Summary</a> */}
                             </div>
                         </div>
                     ))}

@@ -268,8 +268,6 @@
     vertical-align: middle;
 }
 
-
-
 .clientNameColumn {
     font-weight: 500;
     color: #1f2937;
@@ -700,78 +698,64 @@
     text-decoration: underline;
 }
 
-/* Mobile responsiveness for Client List */
 @media (max-width: 767px) {
+    .clientListContainer {
+        overflow-x: hidden; /* Prevent horizontal scrolling on small screens */
+    }
+
     .clientListHeader {
-        display: none; /* Hide table header on mobile */
+        display: none; /* Hide the table header on small screens */
     }
 
     .clientListItem {
-        display: block; /* Change from table-row to block for card layout */
-        background-color: white;
+        display: block; /* Make each row a block-level element */
         margin-bottom: 1rem;
         padding: 1rem;
+        border: 1px solid #e5e7eb;
         border-radius: 0.5rem;
         box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-        border-bottom: none; /* Remove individual item border as it's a card */
-        position: relative; /* For actions positioning */
-        padding-bottom: 3.5rem; /* Space for action buttons */
+        position: relative; /* Needed for pseudo-elements positioning */
     }
 
     .clientListItem:hover {
-        background-color: white; /* Keep background white on hover for cards */
+        background-color: transparent; /* Remove hover effect for cards */
     }
 
-    .clientListItem p, .clientListItem span, .clientListItem div {
-        display: block; /* Change from table-cell to block */
-        padding: 0.25rem 0; /* Adjust padding for readability */
-        text-align: left; /* Ensure text is left-aligned */
-        margin-bottom: 0.5rem;
+    .clientListItem p,
+    .clientListItem span,
+    .clientListItem div {
+        display: block; /* Make each cell a block-level element within the card */
+        padding: 0.25rem 0;
+        text-align: left; /* Align text to the left */
     }
-    
-    .clientListItem p::before, 
-    .clientListItem span::before, 
-    .clientListItem div::before {
-        content: attr(data-label) ": "; /* Use data-label for content */
+
+    .clientListItem p::before,
+    .clientListItem span::before {
+        content: attr(data-label) ": "; /* Add labels using data-label attribute */
         font-weight: 600;
         color: #4b5563;
-        display: inline-block;
-        min-width: 80px; /* Align labels */
+        margin-right: 0.5rem;
     }
 
-    /* Remove specific ::before for actions div as it's not a label */
-    .clientListItem div.clientActions::before {
-        content: none;
-    }
-
+    /* Adjust specific columns to remove extra padding or style for card view */
     .clientNameColumn {
-        font-size: 1.125rem; /* Larger client name */
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 1rem;
+        font-size: 1.125rem;
+        margin-bottom: 0.5rem;
     }
 
     .statusBadge {
-        display: inline-block; /* Keep badge styling */
+        display: inline-block; /* Keep badge in one line with label */
         margin-top: 0.25rem;
     }
 
     .clientActions {
-        display: flex;
-        flex-wrap: wrap; /* Allow buttons to wrap */
-        gap: 0.5rem;
-        position: absolute; /* Position actions at the bottom of the card */
-        bottom: 1rem;
-        left: 1rem;
-        right: 1rem;
-        justify-content: flex-start; /* Align actions to the left */
-        border-top: 1px solid #e5e7eb;
-        padding-top: 0.75rem;
-        margin-top: 0.75rem;
+        justify-content: flex-start; /* Align action buttons to the left */
+        margin-top: 1rem;
+        gap: 0.75rem;
     }
-    .clientActions .actionLink {
-        flex-grow: 1; /* Allow links to take available space */
-        text-align: center;
-        padding: 0.5rem 0.75rem;
+
+    .actionLink {
+        padding: 0.5rem 0.75rem; /* Adjust padding for card actions */
+        font-size: 0.75rem;
     }
 }

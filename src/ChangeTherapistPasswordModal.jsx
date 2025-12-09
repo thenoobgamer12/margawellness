@@ -13,7 +13,7 @@ const ChangeTherapistPasswordModal = ({ isOpen, onClose, therapist, onChangePass
             setError("New passwords don't match.");
             return;
         }
-        onChangePassword(therapist, newPassword);
+        onChangePassword(therapist.id, newPassword);
         onClose();
     };
 

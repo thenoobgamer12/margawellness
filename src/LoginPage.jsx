@@ -7,15 +7,38 @@ const LoginPage = ({ onLogin }) => { // Removed 'users' prop
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => { // Renamed handleLogin to handleSubmit for clarity
+  const handleLogin = async (e) => { // Made async
     e.preventDefault();
     setError('');
 
-    // Call the onLogin prop, which now handles API communication and returns a boolean
-    const success = await onLogin({ username, password });
+    try {
+      const response = await fetch('http://localhost:3002/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (!success) {
-      setError('Invalid username or password.'); // Error message is now generic, as specific error comes from App.jsx
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+      } else {
+          // If not JSON, assume it's a plain text error or empty response
+          data = { message: await response.text() || response.statusText || 'Unknown error' };
+      }
+      
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user)); // Store user info
+        onLogin(data.user);
+      } else {
+        setError(data.message || 'Login failed.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Network error or server unavailable.');
     }
   };
 
@@ -28,7 +51,7 @@ const LoginPage = ({ onLogin }) => { // Removed 'users' prop
         <h2 className={styles.title}>
           Login to your account
         </h2>
-        <form className={styles.form} onSubmit={handleSubmit}> {/* Changed handleLogin to handleSubmit */}
+        <form className={styles.form} onSubmit={handleLogin}>
           {error && <p className={styles.error}>{error}</p>}
           <input
             id="username"

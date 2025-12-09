@@ -16,7 +16,7 @@
     {
       "id": "ce8a",
       "username": "monoshita",
-      "password": "bW9ub3NoaXRhMTIz",
+      "password": "bWVvdw==",
       "role": "Therapist",
       "counselor": "monoshita"
     }
@@ -171,6 +171,21 @@
       "status": "Open",
       "caseHistoryDocument": "https://example.com/case_history_10",
       "sessionSummaryDocument": "https://example.com/session_summary_10"
+    },
+    {
+      "id": "c85f",
+      "clientName": "gaurav kumar",
+      "age": 34,
+      "gender": "Male",
+      "contactNo": "9801234567",
+      "addressCity": "Kolkata",
+      "caseType": "Personal Counseling",
+      "counselor": "monoshita",
+      "caseId": "C-1269",
+      "dateOpened": "2025-12-08",
+      "status": "Open",
+      "caseHistoryDocument": "",
+      "sessionSummaryDocument": ""
     }
   ],
   "schedule": {

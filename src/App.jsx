@@ -1,82 +1,97 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import LoginPage from './LoginPage';
 import ChangePasswordModal from './ChangePasswordModal';
 import AddTherapistModal from './AddTherapistModal';
 import EditClientModal from './EditClientModal';
-// import ScheduleModal from './ScheduleModal'; // Removed
+import ScheduleModal from './ScheduleModal';
 import CreateClientModal from './CreateClientModal';
 import TherapistDashboard from './TherapistDashboard';
 import Dashboard from './Dashboard';
 import EditTherapistModal from './EditTherapistModal';
 import ChangeTherapistPasswordModal from './ChangeTherapistPasswordModal';
 import ClearDatabaseModal from './ClearDatabaseModal';
-import styles from './Dashboard.module.css';
-
-const API_BASE_URL = 'http://localhost:3002/api';
+import styles from './Dashboard.module.css'; // Still needed for some styles
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [users, setUsers] = useState([]);
+  const [user, setUser] = useState(null); // User object from JWT payload
   const [clients, setClients] = useState([]);
-  const [therapists, setTherapists] = useState([]);
+  const [therapists, setTherapists] = useState([]); // Therapists are users with role 'Therapist'
   const [caseTypes, setCaseTypes] = useState([]);
   const [genders, setGenders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  // const [isScheduleOpen, setScheduleOpen] = useState(false); // Removed
+  // const [schedule, setSchedule] = useState({}); // Schedule will be handled in ScheduleModal or fetched on demand
 
-  // Helper function for audit logging
-  const logAudit = async (action, targetType = null, targetId = null, details = null) => {
-    if (!user) return;
-    try {
-      await fetch(`${API_BASE_URL}/logs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          action,
-          targetType,
-          targetId,
-          details
-        })
-      });
-    } catch (logError) {
-      console.error('Failed to send audit log:', logError);
+  // Check for stored token and user on initial load
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    if (storedToken && storedUser) {
+      setUser(JSON.parse(storedUser));
     }
-  };
+  }, []);
 
-
+  // Fetch data from new backend
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) { // Only fetch if user is logged in
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      const token = localStorage.getItem('token');
+
       try {
-        const [usersRes, clientsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/users`),
-          fetch(`${API_BASE_URL}/clients`),
+        const [clientsRes, usersRes] = await Promise.all([
+          fetch('http://localhost:3002/clients', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }),
+          // Assuming /users endpoint returns all users, including therapists and admins
+          // A dedicated /therapists endpoint might be better in a real app
+          fetch('http://localhost:3002/users', { 
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
         ]);
-        if (!usersRes.ok || !clientsRes.ok) {
-          throw new Error(`HTTP error! Status: ${usersRes.status}/${clientsRes.status}`);
+
+        if (!clientsRes.ok) {
+          throw new Error(`HTTP error! Clients status: ${clientsRes.status}`);
         }
-        const usersData = await usersRes.json();
+        if (!usersRes.ok) {
+            throw new Error(`HTTP error! Users status: ${usersRes.status}`);
+        }
+
         const clientsData = await clientsRes.json();
+        const usersData = await usersRes.json();
         
-        setUsers(usersData);
         setClients(clientsData);
         
-        setTherapists(usersData.filter(u => u.role === 'Therapist'));
+        // Filter users to get therapists
+        const therapistUsers = usersData.filter(u => u.role === 'Therapist');
+        setTherapists(therapistUsers);
         
-        setCaseTypes([...new Set(clientsData.map(c => c.caseType))]);
-        setGenders([...new Set(clientsData.map(c => c.gender))]);
+        // Dynamically generate case types and genders from client data
+        setCaseTypes([...new Set(clientsData.map(c => c.caseType).filter(Boolean))]); // filter(Boolean) removes undefined/null
+        setGenders([...new Set(clientsData.map(c => c.gender).filter(Boolean))]);
 
       } catch (e) {
-        setError(e.message);
         console.error("Error fetching initial data:", e);
+        setError(e.message);
+        // If token is invalid or expired, log out the user
+        if (e.message.includes('401') || e.message.includes('403')) {
+            handleLogout();
+        }
       } finally {
         setIsLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [user]); // Re-run effect when user state changes (e.g., after login/logout)
 
   const [isChangePasswordOpen, setChangePasswordOpen] = useState(false);
   const [isAddTherapistOpen, setAddTherapistOpen] = useState(false);
@@ -86,285 +101,294 @@ function App() {
   const [editingTherapist, setEditingTherapist] = useState(null);
   const [isChangeTherapistPasswordOpen, setChangeTherapistPasswordOpen] = useState(false);
   const [isClearDatabaseOpen, setClearDatabaseOpen] = useState(false);
-  const [deleteWarning, setDeleteWarning] = useState({ count: 0, show: true });
+  const [isScheduleOpen, setScheduleOpen] = useState(false); // Moved here
 
-  const handleLogin = async (loggedInUser) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(loggedInUser)
-        });
+  // Removed deleteWarning state as it's client-side specific and will be handled by API responses
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            await logAudit('LOGIN_FAILURE', 'user', null, `Attempted login for username: ${loggedInUser.username}. Reason: ${errorData.message || 'Unknown'}`);
-            throw new Error(errorData.message || 'Login failed');
-        }
-
-        const data = await response.json();
-        setUser(data.user);
-        setToken(data.token);
-        await logAudit('LOGIN_SUCCESS', 'user', data.user.id, `User ${data.user.username} logged in.`);
-        return true;
-    } catch (error) {
-        console.error("Login error:", error);
-        alert(error.message);
-        return false;
-    }
+  const handleLogin = (loggedInUser) => {
+    // LoginPage now handles storing token and user in localStorage
+    // We just need to update the user state in App.jsx
+    setUser(loggedInUser);
   };
   
   const handleLogout = () => {
-    logAudit('LOGOUT', 'user', user.id, `User ${user.username} logged out.`);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
-    setToken(null);
+    setClients([]); // Clear client data on logout
+    setTherapists([]); // Clear therapist data on logout
   };
   
   const handleSetClients = (newClients) => {
     setClients(newClients);
   };
 
-  const handleCreateClient = async (newClient) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/clients`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newClient)
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            await logAudit('CREATE_CLIENT_FAILURE', 'client', null, `Failed to create client ${newClient.clientName}. Reason: ${errorData.message || 'Unknown'}`);
-            throw new Error(errorData.message || 'Failed to create client');
-        }
-        const createdClient = await response.json();
-        setClients(prevClients => [...prevClients, createdClient]);
-        await logAudit('CREATE_CLIENT_SUCCESS', 'client', createdClient.id, `Client ${createdClient.clientName} created.`);
-        return true;
-    } catch (error) {
-        console.error("Error creating client:", error);
-        alert(`Error creating client: ${error.message}`);
-        return false;
-    }
-  };
-
   const handleDeleteClient = async (clientId) => {
-    const performDelete = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/clients/${clientId}`, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Failed to delete client');
-            setClients(clients.filter(c => c.id !== clientId));
-            await logAudit('DELETE_CLIENT_SUCCESS', 'client', clientId, `Client ID ${clientId} deleted.`);
-        } catch (error) {
-            console.error("Error deleting client:", error);
-            alert(`Error deleting client: ${error.message}`);
-            await logAudit('DELETE_CLIENT_FAILURE', 'client', clientId, `Failed to delete client ID ${clientId}. Reason: ${error.message}`);
-        }
-    };
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Authentication required to delete client.');
+      return;
+    }
 
-    // Note: The backend will cascade delete appointments.
-    if (deleteWarning.show) {
-        if (window.confirm("Are you sure you want to delete this client?")) {
-            await performDelete();
-            setDeleteWarning({ count: 1, show: false });
+    try {
+      const response = await fetch(`http://localhost:3002/clients/${clientId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-    } else {
-        if (deleteWarning.count < 5) {
-            await performDelete();
-            setDeleteWarning(prev => ({ ...prev, count: prev.count + 1 }));
-        } else {
-            if (window.confirm("You have deleted several items. Are you sure you want to continue?")) {
-                await performDelete();
-                setDeleteWarning({ count: 0, show: true });
-            }
-        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      setClients(clients.filter(c => c.id !== clientId));
+      alert('Client deleted successfully.');
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      setError('Failed to delete client.');
     }
   };
 
   const handleDeleteTherapist = async (therapistId) => {
-    const performDelete = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/users/${therapistId}`, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Failed to delete therapist');
-            setUsers(users.filter(u => u.id !== therapistId));
-            setTherapists(therapists.filter(t => t.id !== therapistId));
-            await logAudit('DELETE_THERAPIST_SUCCESS', 'user', therapistId, `Therapist ID ${therapistId} deleted.`);
-        } catch (error) {
-            console.error("Error deleting therapist:", error);
-            alert(`Error deleting therapist: ${error.message}`);
-            await logAudit('DELETE_THERAPIST_FAILURE', 'user', therapistId, `Failed to delete therapist ID ${therapistId}. Reason: ${error.message}`);
-        }
-    };
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Authentication required to delete therapist.');
+      return;
+    }
 
-    // Note: The backend will cascade delete appointments.
-    if (deleteWarning.show) {
-        if (window.confirm("Are you sure you want to delete this therapist?")) {
-            await performDelete();
-            setDeleteWarning({ count: 1, show: false });
+    try {
+      const response = await fetch(`http://localhost:3002/users/${therapistId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-    } else {
-        if (deleteWarning.count < 5) {
-            await performDelete();
-            setDeleteWarning(prev => ({ ...prev, count: prev.count + 1 }));
-        } else {
-            if (window.confirm("You have deleted several items. Are you sure you want to continue?")) {
-                await performDelete();
-                setDeleteWarning({ count: 0, show: true });
-            }
-        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      setTherapists(therapists.filter(t => t.id !== therapistId));
+      alert('Therapist deleted successfully.');
+    } catch (error) {
+      console.error("Error deleting therapist:", error);
+      setError('Failed to delete therapist.');
     }
   };
 
-  const handleClearDatabase = async (password) => {
-    if (user.role !== 'Admin') {
-        alert('Only admins can perform this action.');
+  const handleClearDatabase = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        setError('Authentication required to clear database.');
         return;
     }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/system/clear-database`, {
+        // This assumes you have an admin endpoint for clearing data
+        // You might want to implement a more granular clear or separate endpoints for clients, schedule, etc.
+        const response = await fetch('http://localhost:3002/admin/clear-database', { // Assuming a new endpoint for this
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            // Optionally send confirmation or password if required by backend
+            body: JSON.stringify({ confirm: true }) 
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        setClients([]);
+        setTherapists([]);
+        // setSchedule({}); // If schedule is handled in App.jsx
+
+        alert('Database cleared successfully.');
+    } catch (error) {
+        console.error('Error clearing database:', error);
+        setError('Failed to clear database. Make sure you are an Admin.');
+    }
+  };
+  
+  const handleChangePassword = async (oldPassword, newPassword) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        setError('Authentication required to change password.');
+        return false;
+    }
+
+    try {
+        const response = await fetch(`http://localhost:3002/users/${user.id}/change-password`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ password })
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to clear database');
-        }
-        setClients([]);
-        alert('Client and schedule data cleared successfully!');
-    } catch (error) {
-        console.error("Error clearing database:", error);
-        alert(`Error clearing database: ${error.message}`);
-    }
-  };
-  
-  const handleChangePassword = async (oldPassword, newPassword) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/users/${user.id}/password`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ oldPassword, password: newPassword })
+            body: JSON.stringify({ oldPassword, newPassword })
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-            const errorData = await response.json();
-            await logAudit('CHANGE_PASSWORD_FAILURE', 'user', user.id, `Failed to change own password for ${user.username}. Reason: ${errorData.message || 'Unknown'}`);
-            throw new Error(errorData.message || 'Failed to change password');
+            setError(data.message || 'Failed to change password.');
+            return false;
         }
 
-        alert('Password changed successfully!');
-        await logAudit('CHANGE_PASSWORD_SUCCESS', 'user', user.id, `User ${user.username} changed own password.`);
+        alert('Password changed successfully.');
+        // Optionally, re-login user to get a new token if backend issues one on password change
+        // Or update local user object if only password hash changed on backend.
+        // For simplicity, we'll just assume success for now.
         return true;
     } catch (error) {
         console.error("Error changing password:", error);
-        alert(`Error changing password: ${error.message}`);
+        setError('Network error or server unavailable.');
         return false;
     }
   };
 
   const handleAddTherapist = async (therapistData) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        setError('Authentication required to add therapist.');
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        const response = await fetch('http://localhost:3002/register', { // Use the register endpoint for new users
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Admin adding a user
+            },
             body: JSON.stringify({ 
                 username: therapistData.username, 
-                password: therapistData.password,
-                role: 'Therapist' 
+                password: therapistData.password, // Raw password sent to backend for hashing
+                role: 'Therapist',
+                // other therapist specific fields if any for profile, e.g., counselor_name, etc.
             })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            await logAudit('CREATE_THERAPIST_FAILURE', 'user', null, `Failed to add therapist ${therapistData.username}. Reason: ${errorData.message || 'Unknown'}`);
-            throw new Error(`Could not add therapist. ${errorData.message || ''}`);
-        }
+        const data = await response.json();
 
-        const addedUser = await response.json();
-        setUsers(prevUsers => [...prevUsers, addedUser.user]);
-        setTherapists(prev => [...prev, addedUser.user]);
+        if (!response.ok) {
+            setError(data.message || 'Failed to add therapist.');
+            return;
+        }
+        
+        // Assuming the register endpoint returns the created user object
+        // For therapist, we might also need to add specific therapist profile details
+        // For now, let's just add the user to the therapists list
+        setTherapists(prev => [...prev, { id: data.id, username: data.username, role: data.role }]);
         alert('Therapist added successfully!');
-        await logAudit('CREATE_THERAPIST_SUCCESS', 'user', addedUser.user.id, `Therapist ${addedUser.user.username} created.`);
     } catch (error) {
         console.error("Error adding therapist:", error);
-        alert(`Error adding therapist: ${error.message}`);
+        setError('Network error or server unavailable.');
     }
   };
 
   const handleEditClient = async (updatedClient) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        setError('Authentication required to edit client.');
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/clients/${updatedClient.id}`, {
+        const response = await fetch(`http://localhost:3002/clients/${updatedClient.id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify(updatedClient)
         });
-        if (!response.ok) {
-            const errorData = await response.json();
-            await logAudit('EDIT_CLIENT_FAILURE', 'client', updatedClient.id, `Failed to edit client ${updatedClient.clientName}. Reason: ${errorData.message || 'Unknown'}`);
-            throw new Error(errorData.message || 'Failed to edit client');
-        }
-        const returnedClient = await response.json();
+        const data = await response.json();
 
-        setClients(clients.map(c => c.id === returnedClient.id ? returnedClient : c));
-        await logAudit('EDIT_CLIENT_SUCCESS', 'client', returnedClient.id, `Client ${returnedClient.clientName} edited.`);
+        if (!response.ok) {
+            setError(data.message || 'Failed to edit client.');
+            return;
+        }
+
+        setClients(clients.map(c => 
+          c.id === data.id ? data : c
+        ));
+        alert("Client updated successfully.");
     } catch (error) {
         console.error("Error editing client:", error);
-        alert(`Error editing client: ${error.message}`);
+        setError('Network error or server unavailable.');
     }
   };
 
   const handleEditTherapist = async (updatedTherapist) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/users/${updatedTherapist.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: updatedTherapist.username, role: updatedTherapist.role })
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            await logAudit('EDIT_THERAPIST_FAILURE', 'user', updatedTherapist.id, `Failed to edit therapist ${updatedTherapist.username}. Reason: ${errorData.message || 'Unknown'}`);
-            throw new Error(errorData.message || 'Failed to edit therapist');
-        }
-        const returnedTherapist = await response.json();
+    const token = localStorage.getItem('token');
+    if (!token) {
+        setError('Authentication required to edit therapist.');
+        return;
+    }
 
-        const updatedUsers = users.map(u => u.id === returnedTherapist.id ? returnedTherapist : u);
-        setUsers(updatedUsers);
-        setTherapists(updatedUsers.filter(u => u.role === 'Therapist'));
-        await logAudit('EDIT_THERAPIST_SUCCESS', 'user', returnedTherapist.id, `Therapist ${returnedTherapist.username} edited.`);
+    try {
+        const response = await fetch(`http://localhost:3002/users/${updatedTherapist.id}`, { // Assuming a /users/:id PUT for updating user details
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                username: updatedTherapist.username, 
+                role: updatedTherapist.role // Role might also be updatable
+                // Add other therapist-specific fields here if they exist in the therapist profile
+            })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            setError(data.message || 'Failed to edit therapist.');
+            return;
+        }
+
+        setTherapists(therapists.map(t => 
+          t.id === data.id ? data : t
+        ));
+        alert("Therapist updated successfully.");
     } catch (error) {
         console.error("Error editing therapist:", error);
-        alert(`Error editing therapist: ${error.message}`);
+        setError('Network error or server unavailable.');
     }
   };
 
-  const handleChangeTherapistPassword = async (therapist, newPassword) => {
+  const handleChangeTherapistPassword = async (therapistId, newPassword) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        setError('Authentication required to change therapist password.');
+        return false;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/users/${therapist.id}/password`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: newPassword })
+        const response = await fetch(`http://localhost:3002/users/${therapistId}/change-password`, { // Assuming a specific endpoint for changing other user's passwords
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ newPassword }) // No oldPassword needed for admin changing another's password
         });
+        const data = await response.json();
 
         if (!response.ok) {
-            const errorData = await response.json();
-            await logAudit('CHANGE_THERAPIST_PASSWORD_FAILURE', 'user', therapist.id, `Failed to change password for therapist ${therapist.username}. Reason: ${errorData.message || ''}`);
-            throw new Error(`Could not change password. ${errorData.message || ''}`);
+            setError(data.message || 'Failed to change therapist password.');
+            return false;
         }
 
-        alert("Password changed successfully for therapist:", therapist.username);
-        await logAudit('CHANGE_THERAPIST_PASSWORD_SUCCESS', 'user', therapist.id, `Password changed for therapist ${therapist.username}.`);
+        alert("Therapist password changed successfully.");
+        return true;
     } catch (error) {
-        console.error("Error changing password:", error);
-        alert(`Error changing password: ${error.message}`);
+        console.error("Error changing therapist password:", error);
+        setError('Network error or server unavailable.');
+        return false;
     }
   };
 
   const openEditClientModal = (client) => {
     setEditingClient(client);
     setEditClientOpen(true);
-    logAudit('VIEW_CLIENT_DETAILS', 'client', client.id, `Viewed client ${client.clientName} details.`);
   };
 
   const closeEditClientModal = () => {
@@ -375,7 +399,6 @@ function App() {
   const openEditTherapistModal = (therapist) => {
     setEditingTherapist(therapist);
     setEditTherapistOpen(true);
-    logAudit('VIEW_THERAPIST_DETAILS', 'user', therapist.id, `Viewed therapist ${therapist.username} details.`);
   };
 
   const closeEditTherapistModal = () => {
@@ -386,7 +409,6 @@ function App() {
   const openChangeTherapistPasswordModal = (therapist) => {
     setEditingTherapist(therapist);
     setChangeTherapistPasswordOpen(true);
-    logAudit('VIEW_CHANGE_THERAPIST_PASSWORD', 'user', therapist.id, `Opened change password for therapist ${therapist.username}.`);
   };
 
   const closeChangeTherapistPasswordModal = () => {
@@ -399,11 +421,11 @@ function App() {
   }
 
   if (error) {
-    return <div>Error loading data: {error}</div>;
+    return <div className={styles.errorText}>Error loading data: {error}</div>; // Use existing style
   }
 
   if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoginPage onLogin={handleLogin} />; // No users prop needed
   }
 
   return (
@@ -413,27 +435,26 @@ function App() {
           user={user} 
           onLogout={handleLogout} 
           clients={clients}
-          users={users}
+          // users={users} // Removed, now derived from therapists or fetched directly in Dashboard if needed
           therapists={therapists} 
           caseTypes={caseTypes} 
           genders={genders} 
-          setExternalClients={setClients}
-          onCreateClient={handleCreateClient}
+          setExternalClients={handleSetClients}
           openChangePasswordModal={() => setChangePasswordOpen(true)}
           openAddTherapistModal={() => setAddTherapistOpen(true)}
           openEditClientModal={openEditClientModal}
           openEditTherapistModal={openEditTherapistModal}
           openChangeTherapistPasswordModal={openChangeTherapistPasswordModal}
+          openScheduleModal={() => setScheduleOpen(true)}
           openClearDatabaseModal={() => setClearDatabaseOpen(true)}
         />
       ) : (
         <TherapistDashboard 
           user={user} 
           onLogout={handleLogout} 
-          initialClients={clients}
+          initialClients={clients} 
           openEditClientModal={openEditClientModal}
-          clients={clients}
-          therapists={therapists}
+          openScheduleModal={() => setScheduleOpen(true)}
         />
       )}
 
@@ -463,7 +484,15 @@ function App() {
         genders={genders}
         user={user}
       />
-      {/* ScheduleModal component removed */}
+      <ScheduleModal 
+        isOpen={isScheduleOpen} 
+        onClose={() => setScheduleOpen(false)} 
+        user={user} 
+        clients={clients} 
+        therapists={therapists} 
+        // schedule={schedule} // Removed schedule prop as it's not being fetched globally anymore
+        // setSchedule={setSchedule} // Removed
+      />
       <EditTherapistModal
         isOpen={isEditTherapistOpen}
         onClose={closeEditTherapistModal}

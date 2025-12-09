@@ -3,16 +3,17 @@ import styles from './Dashboard.module.css';
 import { X } from 'lucide-react';
 
 const AddTherapistModal = ({ isOpen, onClose, onAddTherapist }) => {
+    // const [name, setName] = useState(''); // Removed as 'counselor' field is gone
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    // Role state is removed as we are hardcoding it to 'Therapist' for security.
 
     const handleSubmit = (e) => {
         e.preventDefault();
         onAddTherapist({
             username,
             password,
-            role: 'Therapist', // Hardcode role to 'Therapist'
+            role: 'Therapist',
+            // counselor: name // Removed
         });
         onClose();
     };
@@ -27,6 +28,7 @@ const AddTherapistModal = ({ isOpen, onClose, onAddTherapist }) => {
                     <button onClick={onClose} className={styles.closeButton}><X size={24} /></button>
                 </div>
                 <form onSubmit={handleSubmit} className={styles.addTherapistForm}>
+                    {/* Removed Full Name input as it's not stored separately */}
                     <input
                         type="text"
                         name="username"
@@ -45,7 +47,6 @@ const AddTherapistModal = ({ isOpen, onClose, onAddTherapist }) => {
                         required
                         className={styles.input}
                     />
-                    {/* Role dropdown removed to prevent creating Admins from this UI. */}
                     <div className={styles.modalFooter}>
                         <button type="button" onClick={onClose} className={styles.cancelButton}>Cancel</button>
                         <button type="submit" className={styles.submitButton}>Add Therapist</button>

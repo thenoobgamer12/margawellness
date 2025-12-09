@@ -3,11 +3,20 @@ import styles from './Dashboard.module.css';
 import { X } from 'lucide-react';
 
 const EditTherapistModal = ({ isOpen, onClose, therapist, onEditTherapist, onDeleteTherapist }) => {
-    const [therapistData, setTherapistData] = useState(therapist || {});
+    // Initialize with only relevant therapist data
+    const [therapistData, setTherapistData] = useState({
+        id: therapist?.id || '',
+        username: therapist?.username || '',
+        role: therapist?.role || ''
+    });
 
     useEffect(() => {
         if (therapist) {
-            setTherapistData(therapist);
+            setTherapistData({
+                id: therapist.id,
+                username: therapist.username,
+                role: therapist.role
+            });
         }
     }, [therapist]);
 
@@ -17,13 +26,15 @@ const EditTherapistModal = ({ isOpen, onClose, therapist, onEditTherapist, onDel
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onEditTherapist(therapistData);
+        onEditTherapist({ id: therapistData.id, username: therapistData.username, role: therapistData.role });
         onClose();
     };
 
     const handleDelete = () => {
-        onDeleteTherapist(therapist.id);
-        onClose();
+        if (window.confirm('Are you sure you want to delete this therapist? This action cannot be undone.')) {
+            onDeleteTherapist(therapist.id);
+            onClose();
+        }
     };
 
     if (!isOpen || !therapist) return null;
@@ -32,31 +43,22 @@ const EditTherapistModal = ({ isOpen, onClose, therapist, onEditTherapist, onDel
         <div className={styles.modalBackdrop}>
             <div className={`${styles.modal} ${styles.editTherapistModal}`}>
                 <div className={styles.modalHeader}>
-                    <h2 className={styles.modalTitle}>Edit User</h2>
+                    <h2 className={styles.modalTitle}>Edit Therapist</h2>
                     <button onClick={onClose} className={styles.closeButton}><X size={24} /></button>
                 </div>
                 <form onSubmit={handleSubmit} className={styles.editTherapistForm}>
+                    {/* Removed Full Name input as 'counselor' field is gone and not part of user schema */}
                     <input
                         name="username"
-                        value={therapistData.username || ''}
+                        value={therapistData.username}
                         onChange={handleChange}
                         placeholder="Username"
                         required
                         className={styles.input}
                     />
-                    <select
-                        name="role"
-                        value={therapistData.role || 'Therapist'}
-                        onChange={handleChange}
-                        required
-                        className={styles.select}
-                        disabled={therapistData.role === 'Admin'} // Disable if user is an Admin
-                    >
-                        <option value="Therapist">Therapist</option>
-                        {/* Admin option removed to prevent changing roles to Admin via UI */}
-                    </select>
+                    {/* Role might also be editable if needed, but for now, it's just username */}
                     <div className={styles.modalFooter}>
-                        <button type="button" onClick={handleDelete} className={styles.deleteButton}>Delete User</button>
+                        <button type="button" onClick={handleDelete} className={styles.deleteButton}>Delete Therapist</button>
                         <button type="button" onClick={onClose} className={styles.cancelButton}>Cancel</button>
                         <button type="submit" className={styles.submitButton}>Save Changes</button>
                     </div>

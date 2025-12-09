@@ -3,33 +3,27 @@ import * as XLSX from 'xlsx';
 import { Download, Upload, Trash } from 'lucide-react';
 import styles from './Dashboard.module.css';
 
-const API_BASE_URL = 'http://localhost:3002/api';
-
 const Settings = ({ clients, therapists, setExternalClients, openClearDatabaseModal }) => {
     const fileInputRef = useRef(null);
 
     const handleExport = () => {
-        // Map counselorId back to counselor username for export
-        const getCounselorUsername = (counselorId) => {
-            const counselor = therapists.find(t => t.id === counselorId);
-            return counselor ? counselor.username : '';
-        };
-
-        const header = ["Client ID", "Client Name", "Age", "Gender", "Contact No.", "Address City", "Case Type", "Counselor", "Date Created", "Status", "Case History Document", "Session Summary Document"];
-        const rows = clients.map(client => [
-            client.id, // Using client.id as unique identifier
-            client.clientName,
-            client.age,
-            client.gender,
-            client.contactNo,
-            client.addressCity,
-            client.caseType,
-            getCounselorUsername(client.counselorId), // Map counselorId to username
-            client.createdAt ? new Date(client.createdAt).toISOString().split('T')[0] : '', // Using createdAt
-            client.status,
-            client.caseHistoryDocument,
-            client.sessionSummaryDocument
-        ]);
+        const header = ["ID", "Name", "Age", "Gender", "Phone", "Address", "Therapist Username", "Case Type", "Status", "Case History URL", "Session Summary URL"];
+        const rows = clients.map(client => {
+            const therapist = therapists.find(t => t.id === client.therapist_id);
+            return [
+                client.id,
+                client.name,
+                client.age,
+                client.gender,
+                client.phone,
+                client.address,
+                therapist ? therapist.username : 'N/A',
+                client.case_type,
+                client.status,
+                client.case_history_url,
+                client.session_summary_url
+            ];
+        });
 
         const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
         const workbook = XLSX.utils.book_new();
@@ -41,6 +35,12 @@ const Settings = ({ clients, therapists, setExternalClients, openClearDatabaseMo
         const file = e.target.files[0];
         if (!file) return;
 
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert("You must be logged in to import clients.");
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
@@ -50,101 +50,107 @@ const Settings = ({ clients, therapists, setExternalClients, openClearDatabaseMo
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet);
 
-                // Updated header mapping - removed Case ID
+                // Mapping generic headers to our DB schema
                 const headerMapping = {
-                    "Client Name": "clientName",
+                    "Name": "name",
+                    "Client Name": "name",
                     "Age": "age",
                     "Gender": "gender",
-                    "Contact No.": "contactNo",
-                    "Address City": "addressCity",
-                    "Case Type": "caseType",
-                    "Counselor": "counselor", // Will be converted to counselorId
+                    "Phone": "phone",
+                    "Contact No.": "phone",
+                    "Address": "address",
+                    "Therapist": "therapist_username",
+                    "Therapist Username": "therapist_username",
+                    "Counselor": "therapist_username",
+                    "Case Type": "case_type",
                     "Status": "status",
-                    "Case History Document": "caseHistoryDocument",
-                    "Session Summary Document": "sessionSummaryDocument"
+                    "Case History URL": "case_history_url",
+                    "Case History Document": "case_history_url",
+                    "Session Summary URL": "session_summary_url",
+                    "Session Summary Document": "session_summary_url"
                 };
-                
-                // No longer checking existingCaseIds as caseId is removed from schema
-                // Assume all imported clients are new or handle uniqueness at backend
 
-                const importedClients = json
-                    .map(row => {
-                        const client = {};
-                        for (const header in headerMapping) {
-                            // Trim string values to remove leading/trailing whitespace
-                            client[headerMapping[header]] = typeof row[header] === 'string' ? row[header].trim() : row[header];
+                const importedClients = json.map(row => {
+                    const client = {};
+                    for (const key in row) {
+                        const mappedKey = headerMapping[key] || headerMapping[key.trim()];
+                        if (mappedKey) {
+                            client[mappedKey] = row[key];
                         }
-                        return client;
-                    })
-                    .map(client => {
-                        // Find therapist ID from username, default to null if not found
-                        const counselorObj = therapists.find(t => t.username === client.counselor);
-                        
-                        return {
-                            clientName: client.clientName || 'N/A',
-                            age: parseInt(client.age, 10) || null, // Parse age to int, default to null
-                            gender: client.gender || 'Other',
-                            contactNo: client.contactNo || null,
-                            addressCity: client.addressCity || null,
-                            caseType: client.caseType || null,
-                            counselorId: counselorObj ? counselorObj.id : null, // Convert counselor name to ID
-                            status: client.status || 'Open',
-                            caseHistoryDocument: client.caseHistoryDocument || null,
-                            sessionSummaryDocument: client.sessionSummaryDocument || null
-                        };
-                    })
-                    .filter(client => client.clientName); // Ensure at least clientName exists
+                    }
+                    return client;
+                }).filter(c => c.name); // Basic validation
 
-                if (importedClients.length === 0) {
-                    alert("No valid new client data found in the file.");
-                    fileInputRef.current.value = ""; // Reset file input
+                // Enrich with therapist_id and defaults
+                const processedClients = importedClients.map(client => {
+                    // Find therapist by username (case-insensitive)
+                    const therapistUser = client.therapist_username 
+                        ? therapists.find(t => t.username.toLowerCase() === client.therapist_username.toLowerCase())
+                        : null;
+
+                    const defaultTherapistId = therapists.length > 0 ? therapists[0].id : null;
+
+                    return {
+                        name: client.name,
+                        age: client.age || null, 
+                        gender: client.gender || 'Other',
+                        phone: client.phone || '',
+                        address: client.address || '',
+                        therapist_id: therapistUser ? therapistUser.id : defaultTherapistId,
+                        case_type: client.case_type || 'Mental Health Support',
+                        status: client.status || 'Open',
+                        case_history_url: client.case_history_url || '',
+                        session_summary_url: client.session_summary_url || ''
+                    };
+                });
+
+                if (processedClients.length === 0) {
+                    alert("No valid client data found.");
                     return;
                 }
 
-                // Batch loop for importing clients
-                const importInBatches = async (clientsToImport) => {
-                    const batchSize = 20;
-                    let allImported = [];
+                // Batch Import
+                const batchSize = 20;
+                let successCount = 0;
+                let errors = [];
 
-                    for (let i = 0; i < clientsToImport.length; i += batchSize) {
-                        const batch = clientsToImport.slice(i, i + batchSize);
+                for (let i = 0; i < processedClients.length; i += batchSize) {
+                    const batch = processedClients.slice(i, i + batchSize);
+                    await Promise.all(batch.map(async (client) => {
                         try {
-                            const importedBatch = await Promise.all(
-                                batch.map(client =>
-                                    fetch(`${API_BASE_URL}/clients`, { // Use new API base URL
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(client)
-                                    }).then(async res => {
-                                        if (!res.ok) {
-                                            const errorBody = await res.json(); // Assuming backend sends JSON error
-                                            throw new Error(`Failed to import '${client.clientName}': ${errorBody.message || res.statusText}`);
-                                        }
-                                        return res.json();
-                                    })
-                                )
-                            );
-                            allImported = [...allImported, ...importedBatch];
-                            console.log(`Imported batch ${i / batchSize + 1}...`);
-                        } catch (error) {
-                            throw error; // Propagate error to be caught by the outer catch block
+                            const res = await fetch('http://localhost:3002/clients', {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify(client)
+                            });
+                            if (!res.ok) {
+                                const errData = await res.json();
+                                throw new Error(errData.message || res.statusText);
+                            }
+                            const newClient = await res.json();
+                            setExternalClients(prev => [newClient, ...prev]);
+                            successCount++;
+                        } catch (err) {
+                            errors.push(`${client.name}: ${err.message}`);
                         }
-                    }
-                    return allImported;
-                };
-
-                const newClients = await importInBatches(importedClients);
-                
-                setExternalClients(prev => [...prev, ...newClients]); // Update global clients state
-                alert(`${newClients.length} clients imported successfully!`);
-            } catch (error) {
-                console.error("Import failed:", error);
-                alert(`Import failed: ${error.message}`);
-            } finally {
-                // Reset the file input so the user can select the same file again if needed
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = "";
+                    }));
                 }
+
+                if (errors.length > 0) {
+                    console.error("Some imports failed:", errors);
+                    alert(`Imported ${successCount} clients. ${errors.length} failed. Check console for details.`);
+                } else {
+                    alert(`Successfully imported all ${successCount} clients.`);
+                }
+
+            } catch (error) {
+                console.error("Import processing error:", error);
+                alert("Failed to process file. Ensure it is a valid Excel file.");
+            } finally {
+                if (fileInputRef.current) fileInputRef.current.value = "";
             }
         };
         reader.readAsArrayBuffer(file);

@@ -1,0 +1,99 @@
+# Marga Wellness Project Architecture Overview
+
+This document provides a consolidated architectural overview of the Marga Wellness application following its migration to a PostgreSQL backend and recent feature updates.
+
+## 1. Full Stack Architecture
+
+### Frontend (React + Vite)
+- **Entry Point:** `src/main.jsx` initializes the app and mounts `src/App.jsx`.
+- **State Management:** `App.jsx` acts as the central store. It fetches initial data (clients, therapists) on load and distributes it to child components (`Dashboard`, `TherapistDashboard`, Modals) via props.
+- **Communication:** Uses the standard `fetch` API to interact with the backend at `http://localhost:3002`.
+- **Authentication:** Bearer tokens (JWT) are stored in `localStorage` and sent with every protected request.
+- **Styling:** Modular CSS (`*.module.css`) is used for component-scoped styling.
+
+### Backend (Node.js + Express)
+- **Entry Point:** `server/index.js`.
+- **Security:**
+  - `cors`: Handles Cross-Origin Resource Sharing.
+  - `bcrypt`: Hashes passwords before storage.
+  - `jsonwebtoken`: Generates and verifies session tokens.
+- **Middleware:** `authenticateToken` protects routes, ensuring request legitimacy and attaching user info to `req.user`.
+- **Database Interface:** `pg` (node-postgres) executes raw SQL queries directly against the database.
+
+### Database (PostgreSQL)
+- **Structure:** Relational model with Foreign Key constraints to ensure data integrity.
+- **Tables:** `users`, `clients`, `appointments`, `audit_logs`.
+
+---
+
+## 2. Data Model (Current Schema)
+
+### `users`
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | SERIAL (PK) | Unique user ID. |
+| `username` | VARCHAR | Unique login name. |
+| `password` | VARCHAR | Hashed password. |
+| `role` | VARCHAR | 'Admin' or 'Therapist'. |
+
+### `clients`
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | SERIAL (PK) | Unique client ID. |
+| `name` | VARCHAR | Client's full name. |
+| `age` | INTEGER | Client's age (Replaces DOB). |
+| `gender` | VARCHAR | Male, Female, Other, Rather not say. |
+| `phone` | VARCHAR | Contact number. |
+| `address` | VARCHAR | Physical address. |
+| `therapist_id` | INTEGER (FK) | Links to `users.id`. |
+| `case_type` | VARCHAR | e.g., Mental Health Support, Academic Counseling. |
+| `status` | VARCHAR | 'Open' or 'Closed'. |
+| `case_history_url` | TEXT | Link to external document. |
+| `session_summary_url` | TEXT | Link to external document. |
+
+### `appointments`
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | SERIAL (PK) | Unique appointment ID. |
+| `client_id` | INTEGER (FK) | Links to `clients.id`. |
+| `therapist_id` | INTEGER (FK) | Links to `users.id`. |
+| `appointment_time` | TIMESTAMP | ISO timestamp of the session. |
+
+### `audit_logs`
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | SERIAL (PK) | Unique log ID. |
+| `user_id` | INTEGER (FK) | Who performed the action. |
+| `action_type` | VARCHAR | e.g., CREATE_CLIENT, VIEW_APPOINTMENTS. |
+| `timestamp` | TIMESTAMP | When the action occurred. |
+
+---
+
+## 3. Key Workflows & Features
+
+### Authentication & Authorization
+- **Login:** Users submit credentials to `POST /login` and receive a JWT.
+- **RBAC (Role-Based Access Control):**
+  - **Admins:** Full CRUD on clients, users, and appointments.
+  - **Therapists:** Read-only access to their *own* clients/schedule. Limited update access (Status, Docs) for their assigned clients.
+
+### Client Management
+- **Create:** Captures Name, Age, Gender, Contact, Address, Case Type, and Therapist. (No Email/DOB).
+- **View:** Dashboard list. Admins see all; Therapists see filtered list.
+- **Update:** Admins edit all fields. Assigned Therapists can edit specific fields.
+- **Import/Export:** Excel-based bulk operations via `Settings.jsx`, mapped to the current schema.
+
+### Scheduling
+- **View:** `ScheduleModal` requests appointments for a precise date range (`start_date` to `end_date` in ISO format).
+- **Booking:** Strictly Admin-only via `POST /appointments`.
+- **Parsing:** Frontend handles local-to-ISO time conversion to ensure appointments appear correctly on the calendar.
+
+### Therapist Management
+- **Admin Only:** Allows creating new accounts (`POST /register`), updating details (`PUT /users/:id`), and deleting users.
+
+---
+
+## 4. Codebase Observations
+- **Consistency:** The codebase consistently uses "Age" and "Case Type" across all forms and API calls.
+- **Safety:** Backend endpoints enforce role checks (`req.user.role`) independently of frontend UI logic.
+- **Maintainability:** Hardcoded options (Gender, Case Type) are duplicated in `CreateClientModal` and `EditClientModal`, representing a minor point for future refactoring (e.g., moving to a constants file).

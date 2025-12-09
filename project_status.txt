@@ -1,0 +1,5 @@
+This project is currently in a working state, with all previously requested features implemented and functional.
+
+We are now planning to introduce further improvements and new functionalities. However, given the complexity of the existing codebase and the potential for new changes to introduce unforeseen issues or bugs, we will be adopting a cautious development approach.
+
+To ensure the stability of the current working version, all subsequent development and experimental changes will be conducted within a duplicated project folder. This strategy allows us to test new features and refactorings independently, without risking the integrity of the main codebase, until they are thoroughly vetted and stable.
